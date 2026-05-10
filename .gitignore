@@ -1,7 +1,6 @@
 models/FFNN.weights.h5
 
-data/*
-!data/.gitkeep
+data/
 
 src/*
 !src/.gitkeep
