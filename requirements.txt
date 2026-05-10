@@ -1,0 +1,10 @@
+matplotlib
+numpy
+optuna
+optuna-integration[tfkeras]
+Pillow
+scikit-learn
+seaborn
+split-folders
+tensorflow
+kagglehub
