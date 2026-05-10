@@ -1,19 +1,33 @@
 import os
 import shutil
+import json
 import splitfolders
 
-# 1. Get the absolute path to the folder containing this exact .py script
+# 1. Setup Paths
 script_dir = os.path.dirname(os.path.abspath(__file__))
-
-# 2. Build the destination path relative to the script
+config_path = os.path.join(script_dir, "..", "config", "config.json")
+source_path = os.path.join(script_dir, "..", "data", "raw", "Bangunan Retak")
 dest_path = os.path.join(script_dir, "..", "data", "split")
 
-# If data/split already exists from a previous run, delete it first
+# 2. Read the configuration file
+with open(config_path, "r") as file:
+    config = json.load(file)
+    
+# Extract the ratios and convert the list to a tuple
+dataset_ratios = tuple(config["split_ratios"])
+
+# 3. Clean up the destination if it already exists
 if os.path.exists(dest_path):
     shutil.rmtree(dest_path)
 
-# 3. Get the source path for the raw data
-source_path = os.path.join(script_dir, "..", "data", "raw")
-
-# 4. Split the dataset into train, validation, and test sets
-splitfolders.ratio(source_path, output=dest_path, ratio=(.8, .15, .05), group_prefix=None, move=False)
+# 4. Split the dataset
+print(f"Splitting data with ratios: {dataset_ratios}")
+splitfolders.ratio(
+    source_path, 
+    output=dest_path, 
+    seed=42,
+    ratio=dataset_ratios, 
+    group_prefix=None, 
+    move=False
+)
+print(f"Dataset split into: {dest_path}")
