@@ -1,9 +1,7 @@
-import os
-import json
 import optuna
 from optuna.integration import TFKerasPruningCallback
 
-from src.utils.config import get_search_space, get_global
+from src.utils.config import get_search_space, get_global, update_best
 from src.utils.data_loader import load_datasets, prefetch_datasets, compute_class_weights
 from src.models.rnn_column import build_rnn_column
 
@@ -44,9 +42,11 @@ if __name__ == "__main__":
     n_trials = get_global().get("n_trials", 30)
     study.optimize(objective, n_trials=n_trials)
 
-    print(f"\nBest trial:")
-    print(f"  Value: {study.best_trial.value:.4f}")
-    print(f"  Params: {study.best_trial.params}")
-    os.makedirs("results", exist_ok=True)
-    with open("results/rnn_column_optuna_best.json", "w") as f:
-        json.dump(study.best_trial.params, f, indent=2)
+    val_acc = study.best_trial.value
+    params = dict(study.best_trial.params)
+    print(f"\nBest trial: val_acc={val_acc:.4f}, params={params}")
+
+    if update_best("rnn_column", params, val_acc):
+        print("✓ Updated config.json with improved hyperparameters.")
+    else:
+        print("→ Best known params are still better. Config unchanged.")
