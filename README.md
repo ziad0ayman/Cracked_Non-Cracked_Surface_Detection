@@ -128,7 +128,7 @@ Best params are saved to `results/<model>_optuna_best.json`. Update `config.json
 ├── app.py                       # Streamlit dashboard
 ├── requirements.txt
 ├── config/
-│   └── config.json              # Dataset link, split ratios, all hyperparameters
+│   └── config.json              # Dataset link, split ratios, search spaces + best params
 ├── src/
 │   ├── train/
 │   │   ├── train_ffnn.py        # Training per model
@@ -148,7 +148,11 @@ Best params are saved to `results/<model>_optuna_best.json`. Update `config.json
 │   │   ├── data_setup.py        # Download + split (idempotent, skips if done)
 │   │   └── evaluate.py          # plot_history, confusion_matrix
 │   └── models/
-│       ├── ffnn.py, cnn.py, rnn_column.py, rnn_md.py, transfer.py
+│       ├── ffnn.py
+│       ├── cnn.py
+│       ├── rnn_column.py
+│       ├── rnn_md.py
+│       └── transfer.py
 ├── models/
 │   ├── best_*.keras             # Pre-trained weights
 │   └── evaluation_results.json  # Offline metrics & confusion matrices
