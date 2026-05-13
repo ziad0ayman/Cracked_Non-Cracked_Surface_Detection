@@ -85,19 +85,42 @@ Opens a browser with two tabs:
 
 ```bash
 # Activate venv, then run any script:
-tf_env\Scripts\python src\train_cnn.py
-tf_env\Scripts\python src\train_transfer.py
+tf_env\Scripts\python -m src.train.train_cnn
+tf_env\Scripts\python -m src.train.train_transfer
 # etc.
 ```
 
 Data is downloaded from Kaggle and split automatically on first run.
 
-All scripts accept:
-- `--epochs` — number of epochs
+All hyperparameters are read from `config.json`. Override any on the CLI:
+
+```bash
+tf_env\Scripts\python -m src.train.train_cnn --epochs 50 --batch-size 32
+```
+
+Common flags:
+- `--epochs` / `--batch-size` — override config.json values
 - `--resume` — resume from best checkpoint
 - `--data-root` — custom data path (default: `data/split`)
 - `--checkpoint-dir` — where to save `.keras` files (default: `models/`)
 - `--results-dir` — where to save plots and CSV logs (default: `results/<model>/`)
+
+### Hyperparameter Search
+
+Each model has a corresponding search script that reads its **search space** from `config.json` and runs Optuna:
+
+```bash
+tf_env\Scripts\python -m src.search.search_cnn --n-trials 30
+```
+
+Best params are saved to `results/<model>_optuna_best.json`. Update `config.json` → `models.<name>.best` with the results to use them in training.
+
+### Configuration
+
+`config.json` has three sections:
+- **`global`** — shared settings (image size, callbacks, n_trials)
+- **`models.<name>.search_space`** — Optuna ranges per model
+- **`models.<name>.best`** — known best hyperparameters (used by training by default)
 
 ## 📁 Project Structure
 
@@ -105,7 +128,7 @@ All scripts accept:
 ├── app.py                       # Streamlit dashboard
 ├── requirements.txt
 ├── config/
-│   └── config.json              # Kaggle dataset link & split ratios
+│   └── config.json              # Dataset link, split ratios, all hyperparameters
 ├── src/
 │   ├── train/
 │   │   ├── train_ffnn.py        # Training per model
@@ -113,7 +136,14 @@ All scripts accept:
 │   │   ├── train_rnn_column.py
 │   │   ├── train_rnn_md.py
 │   │   └── train_transfer.py
+│   ├── search/
+│   │   ├── search_ffnn.py       # Optuna hyperparameter search per model
+│   │   ├── search_cnn.py
+│   │   ├── search_rnn_column.py
+│   │   ├── search_rnn_md.py
+│   │   └── search_transfer.py
 │   ├── utils/
+│   │   ├── config.py            # Read config.json (typed accessors)
 │   │   ├── data_loader.py       # load_datasets, prefetch, class_weights, augmentation
 │   │   ├── data_setup.py        # Download + split (idempotent, skips if done)
 │   │   └── evaluate.py          # plot_history, confusion_matrix
