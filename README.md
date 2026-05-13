@@ -24,16 +24,23 @@ An end-to-end deep learning project that automatically detects structural cracks
 | Model | Architecture | Params | Batch Size |
 |-------|-------------|--------|------------|
 | **FFNN** | Flatten → Dense(512) → Dropout(0.157) → Dense(2) | 77.1M | 32 |
+| *(Optuna search)* | *n_layers ∈ [1,2], n_units ∈ [512,1024], dropout ∈ [0.1,0.5], lr ∈ [1e-5,1e-2]* | | |
 | **CNN** | 6× ConvBlock(Conv+BN+ReLU+MP) → GAP → Dense(128) → Dropout(0.254) | 6.3M | 64 |
+| *(Optuna search)* | *n_blocks ∈ [3,6], base_filters ∈ [32,64], dense ∈ [128,384], dropout ∈ [0.1,0.5], lr ∈ [1e-5,1e-2]* | | |
 | **Column RNN** | AvgPool → Permute → BiLSTM(128) → Dense(384) → Dropout(0.485) | 405K | 64 |
+| *(Optuna search)* | *lstm_units ∈ [64,256], dense ∈ [128,512], dropout ∈ [0.1,0.5], lr ∈ [1e-5,1e-2]* | | |
 | **MD-RNN** | Dual BiLSTM(rows + cols) → Concat → Dense(512) → Dropout(0.262) | 874K | 64 |
+| *(Optuna search)* | *lstm_units ∈ [64,256], dense ∈ [128,512], dropout ∈ [0.1,0.5], lr ∈ [1e-5,1e-2]* | | |
 | **DenseNet121** | DenseNet121 backbone → GAP → Dense(384) → BN → Dropout(0.423) | 7.4M | 64 |
+| *(Optuna search)* | *dense ∈ [128,512], dropout ∈ [0.1,0.5], lr ∈ [1e-5,1e-2], unfreeze ∈ [10,40]* | | |
 
 All models use:
 - `categorical_crossentropy` loss with 2-class softmax output
-- `Adam` optimizer with notebook-tuned learning rates
+- `Adam` optimizer with learning rates tuned via **Optuna** hyperparameter search (30–50 trials per model with pruning)
 - Data augmentation (flip, rotation, zoom, contrast) embedded as a `Sequential` layer inside the model graph
 - `image_dataset_from_directory` for the data pipeline (no legacy `ImageDataGenerator`)
+
+> Every architecture — including layer counts, units, dropout rates, and learning rates — was discovered through Optuna Bayesian optimisation. The notebooks in `notebooks/model_architectures/` contain the full search histories.
 
 ## 📈 Results
 
@@ -128,7 +135,7 @@ tf_env\Scripts\python src\data_split.py
 
 ## 🧪 Reproducibility
 
-- All hyperparameters match the Optuna best trials from the notebooks
+- All hyperparameters are the **Optuna best trials** — each model's architecture (layer count, units, dropout, learning rate) was discovered through Bayesian optimisation over 15–50 trials with early pruning via `TFKerasPruningCallback`
 - `compute_class_weights()` uses deterministic file-count traversal (not dataset iteration)
 - Training scripts use `seed=42` in `image_dataset_from_directory`
 - Checkpointing saves the best model by `val_loss`
