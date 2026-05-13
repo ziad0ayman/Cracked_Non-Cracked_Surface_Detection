@@ -1,10 +1,14 @@
+kagglehub
 matplotlib
 numpy
 optuna
 optuna-integration[tfkeras]
+pandas
 Pillow
+plotly
 scikit-learn
 seaborn
 split-folders
+streamlit
 tensorflow
-kagglehub
+plotly
