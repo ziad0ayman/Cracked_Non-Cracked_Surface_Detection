@@ -113,7 +113,7 @@ Each model has a corresponding search script that reads its **search space** fro
 tf_env\Scripts\python -m src.search.search_cnn --n-trials 30
 ```
 
-Best params are saved to `results/<model>_optuna_best.json`. Update `config.json` → `models.<name>.best` with the results to use them in training.
+If Optuna finds better hyperparameters (higher val_accuracy) than the current best, it **automatically updates** `config.json`. No copy-paste needed.
 
 ### Configuration
 
