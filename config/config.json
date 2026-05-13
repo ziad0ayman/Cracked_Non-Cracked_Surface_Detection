@@ -1,8 +1,80 @@
 {
     "dataset_link": "geadalfa/cracked-non-cracked-surface-datasets",
-    "split_ratios": [
-        0.8,
-        0.15,
-        0.05
-    ]
+    "split_ratios": [0.8, 0.15, 0.05],
+    "global": {
+        "image_size": [224, 224],
+        "num_classes": 2,
+        "seed": 42,
+        "early_stopping_patience": 15,
+        "reduce_lr_factor": 0.5,
+        "reduce_lr_patience": 5,
+        "monitor": "val_loss",
+        "n_trials": 30
+    },
+    "models": {
+        "ffnn": {
+            "search_space": {
+                "dense_units": {"type": "int", "min": 512, "max": 1024, "step": 64},
+                "dropout_rate": {"type": "float", "min": 0.1, "max": 0.5},
+                "learning_rate": {"type": "float", "min": 1e-5, "max": 1e-2, "log": true}
+            },
+            "best": {
+                "batch_size": 32, "epochs": 100,
+                "dense_units": 512, "dropout_rate": 0.157, "learning_rate": 2e-5
+            }
+        },
+        "cnn": {
+            "search_space": {
+                "n_blocks": {"type": "int", "min": 3, "max": 6},
+                "base_filters": {"type": "categorical", "values": [32, 64]},
+                "dense_units": {"type": "int", "min": 128, "max": 512, "step": 128},
+                "dropout_rate": {"type": "float", "min": 0.2, "max": 0.5},
+                "learning_rate": {"type": "float", "min": 1e-5, "max": 1e-3, "log": true}
+            },
+            "best": {
+                "batch_size": 64, "epochs": 100,
+                "n_blocks": 6, "base_filters": 64,
+                "dense_units": 128, "dropout_rate": 0.254, "learning_rate": 0.000517
+            }
+        },
+        "rnn_column": {
+            "search_space": {
+                "lstm_units": {"type": "categorical", "values": [32, 64, 128]},
+                "dense_units": {"type": "int", "min": 128, "max": 512, "step": 128},
+                "dropout_rate": {"type": "float", "min": 0.2, "max": 0.5},
+                "learning_rate": {"type": "float", "min": 1e-5, "max": 1e-3, "log": true}
+            },
+            "best": {
+                "batch_size": 64, "epochs": 100,
+                "lstm_units": 128, "dense_units": 384,
+                "dropout_rate": 0.485, "learning_rate": 0.000133
+            }
+        },
+        "rnn_md": {
+            "search_space": {
+                "lstm_units": {"type": "categorical", "values": [32, 64, 128]},
+                "dense_units": {"type": "int", "min": 128, "max": 512, "step": 128},
+                "dropout_rate": {"type": "float", "min": 0.2, "max": 0.5},
+                "learning_rate": {"type": "float", "min": 1e-5, "max": 1e-3, "log": true}
+            },
+            "best": {
+                "batch_size": 64, "epochs": 100,
+                "lstm_units": 128, "dense_units": 512,
+                "dropout_rate": 0.262, "learning_rate": 6.62e-5
+            }
+        },
+        "transfer": {
+            "search_space": {
+                "dense_units": {"type": "int", "min": 128, "max": 512, "step": 128},
+                "dropout_rate": {"type": "float", "min": 0.2, "max": 0.5},
+                "learning_rate": {"type": "float", "min": 1e-5, "max": 1e-3, "log": true},
+                "unfreeze_layers": {"type": "categorical", "values": [0, 10, 20]}
+            },
+            "best": {
+                "batch_size": 64, "epochs": 50,
+                "dense_units": 384, "dropout_rate": 0.423,
+                "learning_rate": 0.000298, "unfreeze_layers": 20
+            }
+        }
+    }
 }

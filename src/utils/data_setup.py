@@ -1,18 +1,17 @@
 import os
 import shutil
-import json
 import random
 from pathlib import Path
 import kagglehub
 
+from src.utils.config import get_dataset_link, get_split_ratios
+
 script_dir = os.path.dirname(os.path.abspath(__file__))
-config_path = os.path.join(script_dir, "..", "..", "config", "config.json")
 raw_dir = os.path.join(script_dir, "..", "..", "data", "raw")
 split_dir = os.path.join(script_dir, "..", "..", "data", "split")
 
 
 def find_raw_dataset(root):
-    """Walk raw_dir and return the first folder that contains Cracked/ and Non Cracked/."""
     for dirpath, dirnames, _ in os.walk(root):
         folders = {d.strip().lower() for d in dirnames}
         if "cracked" in folders and "non cracked" in folders:
@@ -21,9 +20,7 @@ def find_raw_dataset(root):
 
 
 def download_dataset():
-    with open(config_path, "r") as f:
-        config = json.load(f)
-    dataset_name = config["dataset_link"]
+    dataset_name = get_dataset_link()
 
     source_path = kagglehub.dataset_download(dataset_name)
     print(f"Downloaded to cache: {source_path}")
@@ -41,9 +38,7 @@ def download_dataset():
 
 
 def split_dataset(source, seed=42):
-    with open(config_path, "r") as f:
-        config = json.load(f)
-    ratios = config["split_ratios"]
+    ratios = get_split_ratios()
 
     if os.path.exists(split_dir):
         shutil.rmtree(split_dir)

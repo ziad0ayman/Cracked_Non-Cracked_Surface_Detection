@@ -8,6 +8,8 @@ from tensorflow import keras
 from tensorflow.keras import layers, regularizers
 import numpy as np
 from collections import Counter
+
+from src.utils.config import get_model, get_global
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
@@ -83,10 +85,10 @@ tab_detect, tab_perf = st.tabs(["🔍 Detection Dashboard", "📊 Model Performa
 with tab_detect:
     @st.cache_resource(show_spinner="Loading ensemble models...")
     def load_all_models():
-        best_params = {
-            "dense_units": 384, "dropout_rate": 0.4228080027623846,
-            "lr": 0.00029786720003929296, "unfreeze_layers": 20,
-        }
+        transfer_cfg = get_model("transfer")
+        global_cfg = get_global()
+        im_size = tuple(global_cfg["image_size"]) + (3,)
+
         data_augmentation = tf.keras.Sequential([
             layers.Rescaling(1.0 / 255),
             layers.RandomFlip("horizontal_and_vertical"),
@@ -95,17 +97,17 @@ with tab_detect:
             layers.RandomContrast(0.1),
         ], name="data_augmentation")
         base_model = tf.keras.applications.DenseNet121(
-            weights=None, include_top=False, input_shape=(224, 224, 3)
+            weights=None, include_top=False, input_shape=im_size
         )
         m4 = tf.keras.Sequential([
-            tf.keras.layers.Input(shape=(224, 224, 3)),
+            tf.keras.layers.Input(shape=im_size),
             data_augmentation, base_model,
             layers.GlobalAveragePooling2D(),
-            layers.Dense(best_params["dense_units"], use_bias=False,
+            layers.Dense(transfer_cfg["dense_units"], use_bias=False,
                          kernel_regularizer=regularizers.l2(1e-5)),
             layers.BatchNormalization(), layers.ReLU(),
-            layers.Dropout(best_params["dropout_rate"]),
-            layers.Dense(2, activation="softmax"),
+            layers.Dropout(transfer_cfg["dropout_rate"]),
+            layers.Dense(global_cfg["num_classes"], activation="softmax"),
         ])
         m4.load_weights("./models/best_crack_model_densenet.keras")
         m1 = keras.models.load_model("./models/best_cnn_model.keras")
