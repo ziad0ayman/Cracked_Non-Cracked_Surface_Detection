@@ -6,11 +6,19 @@ import tensorflow as tf
 
 from src.utils.data_loader import load_datasets, prefetch_datasets, compute_class_weights
 from src.utils.evaluate import plot_training_history, plot_confusion_matrix
-from src.models.cnn import build_cnn
+from src.models.transfer import build_transfer
 
 
 def main(args):
     data_root = args.data_root
+    train_dir = os.path.join(data_root, 'train')
+    from src.utils.data_setup import main as setup_data
+    setup_data()
+    if not os.path.isdir(train_dir):
+        print(f"ERROR: Data still missing at '{train_dir}' after automatic setup.")
+        print("Check your internet connection (Kaggle download) and config.")
+        return
+
     os.makedirs(args.results_dir, exist_ok=True)
     os.makedirs(args.checkpoint_dir, exist_ok=True)
 
@@ -19,10 +27,10 @@ def main(args):
 
     class_weights = compute_class_weights(os.path.join(data_root, 'train'))
 
-    model = build_cnn()
+    model = build_transfer()
     model.summary()
 
-    ckpt_path = os.path.join(args.checkpoint_dir, 'cnn_best.keras')
+    ckpt_path = os.path.join(args.checkpoint_dir, 'transfer_best.keras')
     callbacks = [
         tf.keras.callbacks.ModelCheckpoint(ckpt_path, save_best_only=True,
                                             monitor='val_loss', mode='min'),
@@ -30,7 +38,7 @@ def main(args):
                                           monitor='val_loss', mode='min'),
         tf.keras.callbacks.ReduceLROnPlateau(factor=0.5, patience=5,
                                               monitor='val_loss', mode='min'),
-        tf.keras.callbacks.CSVLogger(os.path.join(args.results_dir, 'cnn_training.csv'))
+        tf.keras.callbacks.CSVLogger(os.path.join(args.results_dir, 'transfer_training.csv'))
     ]
 
     initial_epoch = 0
@@ -48,23 +56,23 @@ def main(args):
     test_loss, test_acc = model.evaluate(test, verbose=0)
     print(f'Test accuracy: {test_acc:.4f}, Test loss: {test_loss:.4f}')
 
-    model.save(os.path.join(args.checkpoint_dir, 'cnn_final.keras'))
+    model.save(os.path.join(args.checkpoint_dir, 'transfer_final.keras'))
 
-    plot_training_history(history, save_path=os.path.join(args.results_dir, 'cnn_history.png'))
+    plot_training_history(history, save_path=os.path.join(args.results_dir, 'transfer_history.png'))
 
     y_true = np.concatenate([y.numpy().argmax(axis=1) for _, y in test])
     y_pred = np.argmax(model.predict(test), axis=1)
     class_names = sorted(os.listdir(os.path.join(data_root, 'train')))
     plot_confusion_matrix(y_true, y_pred, class_names,
-                          save_path=os.path.join(args.results_dir, 'cnn_cm.png'))
+                          save_path=os.path.join(args.results_dir, 'transfer_cm.png'))
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--data-root', default='data/split')
-    parser.add_argument('--results-dir', default='results/cnn')
+    parser.add_argument('--results-dir', default='results/transfer')
     parser.add_argument('--checkpoint-dir', default='models')
-    parser.add_argument('--epochs', type=int, default=100)
+    parser.add_argument('--epochs', type=int, default=50)
     parser.add_argument('--resume', action='store_true')
     parser.add_argument('--resume-epoch', type=int, default=0)
     main(parser.parse_args())

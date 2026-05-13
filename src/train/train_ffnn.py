@@ -11,6 +11,14 @@ from src.models.ffnn import build_ffnn
 
 def main(args):
     data_root = args.data_root
+    train_dir = os.path.join(data_root, 'train')
+    from src.utils.data_setup import main as setup_data
+    setup_data()
+    if not os.path.isdir(train_dir):
+        print(f"ERROR: Data still missing at '{train_dir}' after automatic setup.")
+        print("Check your internet connection (Kaggle download) and config.")
+        return
+
     os.makedirs(args.results_dir, exist_ok=True)
     os.makedirs(args.checkpoint_dir, exist_ok=True)
 
