@@ -6,29 +6,118 @@ from tensorflow.keras import layers, regularizers
 import numpy as np
 from collections import Counter
 import matplotlib.pyplot as plt
-import pandas as pd 
+import pandas as pd
+import plotly.express as px
+import plotly.graph_objects as go
 
+st.set_page_config(
+    layout="wide",
+    page_title="Crack Detection — Ensemble Dashboard",
+    page_icon="🏗️",
+    initial_sidebar_state="expanded",
+)
 
-st.set_page_config(layout="wide", page_title="Multi-Model Detection")
-st.title("Multi-Model Image Detection Dashboard")
+# ── Custom CSS for a polished look ──────────────────────────────────────────
+st.markdown("""
+<style>
+    /* Main headers */
+    h1 { color: #1A1A2E; font-weight: 700; letter-spacing: -0.5px; }
+    h2 { color: #1A1A2E; font-weight: 600; }
+    h3 { color: #16213E; font-weight: 600; }
 
-@st.cache_resource
+    /* Metric cards */
+    div[data-testid="metric-container"] {
+        background: #f8f9fa;
+        border: 1px solid #e9ecef;
+        border-radius: 12px;
+        padding: 16px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+    }
+    div[data-testid="metric-container"] > label {
+        font-size: 0.85rem !important;
+        color: #6c757d !important;
+    }
+    div[data-testid="metric-container"] > div {
+        font-size: 1.8rem !important;
+        font-weight: 700 !important;
+    }
+
+    /* Expandable raw data */
+    .streamlit-expanderHeader {
+        font-size: 0.9rem;
+        color: #6c757d;
+    }
+
+    /* Progress bar */
+    .stProgress > div > div > div > div {
+        background: linear-gradient(90deg, #0f3460, #e94560);
+    }
+
+    /* Upload box */
+    section[data-testid="stFileUploader"] {
+        padding: 1rem;
+        border: 2px dashed #dee2e6;
+        border-radius: 12px;
+        background: #fafbfc;
+    }
+    section[data-testid="stFileUploader"]:hover {
+        border-color: #0f3460;
+    }
+</style>
+""", unsafe_allow_html=True)
+
+# ── Sidebar ─────────────────────────────────────────────────────────────────
+with st.sidebar:
+    st.markdown("### 🏗️ Ensemble Detector")
+    st.markdown("---")
+
+    uploaded_file = st.file_uploader(
+        "Upload an image", type=["jpg", "jpeg", "png"],
+        label_visibility="collapsed",
+    )
+
+    if uploaded_file is not None:
+        input_image = Image.open(uploaded_file)
+        st.image(input_image, caption=None, use_container_width=True)
+
+    st.markdown("---")
+    st.markdown("**Models in ensemble:**")
+    model_info = pd.DataFrame({
+        "Model": ["CNN", "Column RNN", "MD-RNN", "DenseNet121"],
+        "Type": ["ConvNet", "BiLSTM(Col)", "BiLSTM(Row+Col)", "Transfer"],
+    })
+    st.dataframe(model_info, hide_index=True, use_container_width=True)
+
+# ── Main title ──────────────────────────────────────────────────────────────
+st.title("🏗️ Multi-Model Crack Detection")
+st.markdown(
+    '<p style="color:#6c757d; font-size:1.05rem; margin-top:-8px;">'
+    "Upload a concrete surface image — four deep-learning models analyse it and vote on the result."
+    "</p>",
+    unsafe_allow_html=True,
+)
+st.divider()
+
+# ── Load models ─────────────────────────────────────────────────────────────
+@st.cache_resource(show_spinner="Loading ensemble models...")
 def load_all_models():
-    # Model 4: Transfer Learning (Manual Build)
-    best_params = {'dense_units': 384, 'dropout_rate': 0.4228080027623846, 'lr': 0.00029786720003929296, 'unfreeze_layers': 20}
-    
+    best_params = {
+        "dense_units": 384,
+        "dropout_rate": 0.4228080027623846,
+        "lr": 0.00029786720003929296,
+        "unfreeze_layers": 20,
+    }
+
     data_augmentation = tf.keras.Sequential([
-        layers.Rescaling(1./255),
+        layers.Rescaling(1.0 / 255),
         layers.RandomFlip("horizontal_and_vertical"),
         layers.RandomRotation(0.2),
         layers.RandomZoom(0.1),
-        layers.RandomContrast(0.1)
+        layers.RandomContrast(0.1),
     ], name="data_augmentation")
 
     base_model = tf.keras.applications.DenseNet121(
-        weights=None, 
-        include_top=False, 
-        input_shape=(224, 224, 3)
+        weights=None, include_top=False, input_shape=(224, 224, 3)
     )
 
     m4 = tf.keras.Sequential([
@@ -36,172 +125,223 @@ def load_all_models():
         data_augmentation,
         base_model,
         layers.GlobalAveragePooling2D(),
-        layers.Dense(best_params['dense_units'], use_bias=False, kernel_regularizer=regularizers.l2(1e-5)),
+        layers.Dense(
+            best_params["dense_units"],
+            use_bias=False,
+            kernel_regularizer=regularizers.l2(1e-5),
+        ),
         layers.BatchNormalization(),
         layers.ReLU(),
-        layers.Dropout(best_params['dropout_rate']),
-        layers.Dense(2, activation="softmax")
+        layers.Dropout(best_params["dropout_rate"]),
+        layers.Dense(2, activation="softmax"),
     ])
-
     m4.load_weights("./models/best_crack_model_densenet.keras")
-    
-    # Load others
-    m1 = keras.models.load_model('./models/best_cnn_model.keras')
-    m2 = keras.models.load_model('./models/best_column-by-column_model.keras')
-    m3 = keras.models.load_model('./models/best_MDRNN_model.keras')
-    
+
+    m1 = keras.models.load_model("./models/best_cnn_model.keras")
+    m2 = keras.models.load_model("./models/best_column-by-column_model.keras")
+    m3 = keras.models.load_model("./models/best_MDRNN_model.keras")
+
     return [m1, m2, m3, m4]
 
 models = load_all_models()
-model_names = ["CNN", "RNN_COL", "RNN_COL_ROW", "Transfer Learning"]
+model_names = ["CNN", "Column RNN", "MD-RNN", "DenseNet121"]
+model_labels = ["ConvNet 6-block", "BiLSTM (Column)", "BiLSTM (Row+Col)", "Transfer DenseNet121"]
+
 
 def run_inference(model, pil_image):
     img = pil_image.convert("RGB").resize((224, 224))
     img_array = np.expand_dims(np.array(img), axis=0)
-    prediction = model.predict(img_array)
-    
-    class_names = ["Crack", "No Crack"] 
+    prediction = model.predict(img_array, verbose=0)
     result_index = np.argmax(prediction[0])
-    return class_names[result_index], prediction[0][result_index]
-
-uploaded_file = st.file_uploader("Choose an image...", type=["jpg", "jpeg", "png"])
-
-if uploaded_file is not None:
-    input_image = Image.open(uploaded_file)
-    st.sidebar.image(input_image, caption="Original Image", use_container_width=True)
-
-    st.subheader("Individual Model Results")
-    col1, col2 = st.columns(2)
-    grid = [col1, col2, col1, col2]
-    
-    # --- STORAGE FOR VOTES ---
-    votes = []
-    confidences=[]
-
-    for i, model in enumerate(models):
-        with grid[i]:
-            st.markdown(f"**{model_names[i]}**")
-            with st.spinner(f'Analyzing...'):
-                label, confidence = run_inference(model, input_image)
-                votes.append(label) # Collect the vote
-                confidences.append(confidence)
-                if "No" in label:
-                    st.info(f"{label} ({confidence:.2%})")
-                else:
-                    st.error(f"{label} ({confidence:.2%})")
-    
-            
-    st.divider()
-
-    # --- FINAL ANALYSIS SECTION ---
-    st.subheader("Result Analysis")
-
-    # 1. Logic for Vote Counting
-    # Count the votes
-    vote_counts = Counter(votes)
-    # Get the label with the most votes
-    final_prediction, count = vote_counts.most_common(1)[0]
-
-    # 2. Layout: Three columns for a professional dashboard look
-    c1, c2, c3 = st.columns([1.5, 1.5, 1])
-
-    with c1:
-        st.markdown("###  Vote distribution")
-        vote_df = pd.DataFrame({
-            "Label": list(vote_counts.keys()),
-            "Count": list(vote_counts.values()),
-            "Color": ["#A32D2D" if l == "Crack" else "#185FA5" for l in vote_counts.keys()]
-        })
-        
-        fig1, ax1 = plt.subplots(figsize=(5, 1.6))
-        left = 0
-        for _, row in vote_df.iterrows():
-            ax1.barh(0, row["Count"], left=left, color=row["Color"], height=0.5)
-            if row["Count"] > 0:
-                ax1.text(left + row["Count"] / 2, 0, f"{row['Label']}\n{row['Count']}",
-                        ha="center", va="center", color="white", fontsize=10, fontweight="bold")
-            left += row["Count"]
-        
-        ax1.set_xlim(0, len(models))
-        ax1.set_xticks(range(len(models) + 1))
-        ax1.set_yticks([])
-        ax1.spines[:].set_visible(False)
-        fig1.patch.set_alpha(0)
-        ax1.set_facecolor("none")
-        st.pyplot(fig1)
-
-    with c2:
-        
-        st.markdown("###  Model confidence")
-        bar_colors = ["#FCEBEB" if "Crack" == v and "No" not in v else "#E6F1FB" for v in votes]
-        edge_colors = ["#A32D2D" if "Crack" == v and "No" not in v else "#185FA5" for v in votes]
-        
-        fig2, ax2 = plt.subplots(figsize=(5, 2.8))
-        bars = ax2.barh(model_names, confidences, color=bar_colors,
-                        edgecolor=edge_colors, linewidth=1.5, height=0.5)
-        ax2.set_xlim(0, 1.05)
-        ax2.xaxis.set_major_formatter(plt.FuncFormatter(lambda x, _: f"{x:.0%}"))
-        ax2.tick_params(axis="y", labelsize=10)
-        ax2.tick_params(axis="x", labelsize=9, colors="#888780")
-        ax2.spines["top"].set_visible(False)
-        ax2.spines["right"].set_visible(False)
-        ax2.spines["left"].set_visible(False)
-        ax2.yaxis.set_tick_params(length=0)
-        
-        for bar, conf, pred in zip(bars, confidences, votes):
-            color = "#A32D2D" if "No" not in pred else "#185FA5"
-            ax2.text(bar.get_width() + 0.01, bar.get_y() + bar.get_height() / 2,
-                    f"{conf:.1%}", va="center", ha="left", fontsize=9, color=color)
-        
-        fig2.patch.set_alpha(0)
-        ax2.set_facecolor("none")
-        fig2.tight_layout()
-        st.pyplot(fig2)
-
-        with c3:
-            agreement_count = vote_counts.most_common(1)[0][1]
-            
-            st.markdown("###  Verdict")
-            st.metric("Winner", final_prediction)
-            st.metric("Agreement", f"{agreement_count}/4")
-            
-            if "No" in final_prediction:
-                st.success("Structure is likely Stable")
-            else:
-                st.error("Crack Detected")
-
-    # --- DATA TABLE (Optional) ---
-    with st.expander("View Raw Model Output"):
-        df_results = pd.DataFrame({
-            "Model": model_names,
-            "Prediction": votes,
-            "Confidence": [f"{c:.2%}" for c in confidences]
-        })
-        st.table(df_results)
-            
-            
-    st.divider()
-            
-            
-    # --- final VOTING LOGIC ---
-    st.subheader(" Final Ensemble Result")
-    
-    
-    # Display the final verdict
-    v_col1, v_col2 = st.columns([1, 2])
-    
-    with v_col1:
-        st.metric("Final Verdict", final_prediction)
-    
-    with v_col2:
-        st.write(f"Confidence: **{count} out of {len(models)} models** agreed.")
-        # Visual progress bar for the vote share
-        progress = count / len(models)
-        st.progress(progress)
-
-    if "No" in final_prediction:
-        st.success(f"The ensemble concludes there is **{final_prediction}**.")
-    else:
-        st.warning(f"The ensemble concludes a **{final_prediction}** has been detected.")
+    confidence = prediction[0][result_index]
+    label = "Crack" if result_index == 0 else "No Crack"
+    return label, confidence, prediction[0]
 
 
+# ── No image uploaded ───────────────────────────────────────────────────────
+if uploaded_file is None:
+    col_a, col_b, col_c = st.columns([1, 2, 1])
+    with col_b:
+        st.info("👈 Upload a JPEG or PNG image from the sidebar to get started.", icon="📸")
+    st.stop()
+
+# ── Run inference ───────────────────────────────────────────────────────────
+votes = []
+confidences = []
+probabilities = []
+
+with st.status("Running inference on 4 models...", expanded=True) as status:
+    for name, model in zip(model_names, models):
+        label, conf, probs = run_inference(model, input_image)
+        votes.append(label)
+        confidences.append(conf)
+        probabilities.append(probs)
+        st.write(f"✅ **{name}** → {label} ({conf:.1%})")
+    status.update(label="All models finished.", state="complete")
+
+# ── Individual model cards ─────────────────────────────────────────────────
+st.subheader("🔍 Individual Predictions")
+cols = st.columns(4)
+colors = {"Crack": "#e94560", "No Crack": "#0f3460"}
+bg_colors = {"Crack": "#fff5f5", "No Crack": "#f0f7ff"}
+
+for i, (name, label, conf) in enumerate(zip(model_names, votes, confidences)):
+    c = colors[label]
+    bg = bg_colors[label]
+    with cols[i]:
+        st.markdown(f"""
+        <div style="
+            background:{bg};
+            border:2px solid {c}40;
+            border-radius:14px;
+            padding:18px 12px 14px;
+            text-align:center;
+            height:100%;
+        ">
+            <div style="font-size:0.8rem; color:#6c757d; margin-bottom:2px;">{model_labels[i]}</div>
+            <div style="font-size:1.1rem; font-weight:700;">{name}</div>
+            <div style="font-size:2.2rem; font-weight:800; color:{c}; margin:6px 0 2px;">
+                {"⚠️" if label == "Crack" else "✅"} {label}
+            </div>
+            <div style="font-size:1.3rem; font-weight:600; color:{c};">
+                {conf:.1%}
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+st.divider()
+
+# ── Ensemble analysis ───────────────────────────────────────────────────────
+st.subheader("📊 Ensemble Analysis")
+
+vote_counts = Counter(votes)
+final_prediction, count = vote_counts.most_common(1)[0]
+
+col_left, col_right = st.columns([1.1, 2])
+
+with col_left:
+    crack_prob = np.mean([p[0] for p in probabilities])
+    safe_prob = np.mean([p[1] for p in probabilities])
+
+    st.markdown("### ⚖️ Verdict")
+    verdict_color = "#e94560" if final_prediction == "Crack" else "#0f3460"
+    verdict_icon = "⚠️" if final_prediction == "Crack" else "✅"
+
+    st.markdown(f"""
+    <div style="
+        background: {bg_colors[final_prediction]};
+        border: 2px solid {verdict_color}40;
+        border-radius: 16px;
+        padding: 24px;
+        text-align: center;
+    ">
+        <div style="font-size: 3rem;">{verdict_icon}</div>
+        <div style="font-size: 1.8rem; font-weight: 800; color: {verdict_color};">
+            {final_prediction}
+        </div>
+        <div style="font-size: 0.95rem; color: #6c757d; margin-top: 6px;">
+            {count}/{len(models)} models agree
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    st.markdown("<br>", unsafe_allow_html=True)
+
+    st.markdown("### 📈 Average Confidence")
+    fig_pie = go.Figure(data=[
+        go.Pie(
+            labels=["Crack", "No Crack"],
+            values=[crack_prob, safe_prob],
+            marker=dict(colors=["#e94560", "#0f3460"]),
+            textinfo="label+percent",
+            textposition="outside",
+            hole=0.5,
+            showlegend=False,
+        )
+    ])
+    fig_pie.update_layout(
+        height=220,
+        margin=dict(l=0, r=0, t=0, b=0),
+        paper_bgcolor="rgba(0,0,0,0)",
+        font=dict(size=13),
+    )
+    st.plotly_chart(fig_pie, use_container_width=True)
+
+with col_right:
+    st.markdown("### 📊 Confidence per Model")
+
+    bar_colors = ["#e94560" if v == "Crack" else "#0f3460" for v in votes]
+
+    fig = go.Figure(data=[
+        go.Bar(
+            x=confidences,
+            y=model_names,
+            orientation="h",
+            marker=dict(color=bar_colors, line=dict(color=bar_colors, width=2)),
+            text=[f"{c:.1%}" for c in confidences],
+            textposition="outside",
+            textfont=dict(size=13, color="#333"),
+        )
+    ])
+    fig.update_layout(
+        height=280,
+        xaxis=dict(range=[0, 1.15], tickformat=".0%", title=None),
+        yaxis=dict(title=None),
+        margin=dict(l=0, r=40, t=0, b=0),
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(0,0,0,0)",
+        font=dict(size=12),
+        xaxis_showgrid=False,
+        yaxis_showgrid=False,
+    )
+    st.plotly_chart(fig, use_container_width=True)
+
+    st.markdown("### 🗳️ Vote Distribution")
+    vote_df = pd.DataFrame({
+        "Label": list(vote_counts.keys()),
+        "Count": list(vote_counts.values()),
+    })
+    fig_vote = px.bar(
+        vote_df, x="Label", y="Count", text="Count",
+        color="Label",
+        color_discrete_map={"Crack": "#e94560", "No Crack": "#0f3460"},
+    )
+    fig_vote.update_layout(
+        height=200,
+        margin=dict(l=0, r=0, t=0, b=0),
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(0,0,0,0)",
+        font=dict(size=12),
+        xaxis_showgrid=False,
+        yaxis_showgrid=False,
+        showlegend=False,
+    )
+    fig_vote.update_traces(textposition="outside", textfont=dict(size=16))
+    st.plotly_chart(fig_vote, use_container_width=True)
+
+st.divider()
+
+# ── Confusion probabilities table ──────────────────────────────────────────
+st.subheader("📋 Full Probability Breakdown")
+
+rows = []
+for name, probs, vote in zip(model_names, probabilities, votes):
+    rows.append({
+        "Model": name,
+        "Crack (Class 0)": f"{probs[0]:.3%}",
+        "No Crack (Class 1)": f"{probs[1]:.3%}",
+        "Prediction": vote,
+    })
+df_full = pd.DataFrame(rows)
+
+st.dataframe(
+    df_full,
+    column_config={
+        "Model": st.column_config.TextColumn("Model"),
+        "Crack (Class 0)": st.column_config.TextColumn("Crack (Class 0)"),
+        "No Crack (Class 1)": st.column_config.TextColumn("No Crack (Class 1)"),
+        "Prediction": st.column_config.TextColumn("Prediction"),
+    },
+    hide_index=True,
+    use_container_width=True,
+)
