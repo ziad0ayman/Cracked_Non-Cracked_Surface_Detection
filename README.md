@@ -90,19 +90,14 @@ tf_env\Scripts\python src\train_transfer.py
 # etc.
 ```
 
+Data is downloaded from Kaggle and split automatically on first run.
+
 All scripts accept:
 - `--epochs` — number of epochs
 - `--resume` — resume from best checkpoint
 - `--data-root` — custom data path (default: `data/split`)
 - `--checkpoint-dir` — where to save `.keras` files (default: `models/`)
 - `--results-dir` — where to save plots and CSV logs (default: `results/<model>/`)
-
-### Data Split
-
-```bash
-# Download dataset from Kaggle, then:
-tf_env\Scripts\python src\data_split.py
-```
 
 ## 📁 Project Structure
 
@@ -112,15 +107,15 @@ tf_env\Scripts\python src\data_split.py
 ├── config/
 │   └── config.json              # Kaggle dataset link & split ratios
 ├── src/
-│   ├── data_download.py         # Kaggle download
-│   ├── data_split.py            # Train/val/test split
-│   ├── train_ffnn.py            # Training script per model
-│   ├── train_cnn.py
-│   ├── train_rnn_column.py
-│   ├── train_rnn_md.py
-│   ├── train_transfer.py
+│   ├── train/
+│   │   ├── train_ffnn.py        # Training per model
+│   │   ├── train_cnn.py
+│   │   ├── train_rnn_column.py
+│   │   ├── train_rnn_md.py
+│   │   └── train_transfer.py
 │   ├── utils/
 │   │   ├── data_loader.py       # load_datasets, prefetch, class_weights, augmentation
+│   │   ├── data_setup.py        # Download + split (idempotent, skips if done)
 │   │   └── evaluate.py          # plot_history, confusion_matrix
 │   └── models/
 │       ├── ffnn.py, cnn.py, rnn_column.py, rnn_md.py, transfer.py
