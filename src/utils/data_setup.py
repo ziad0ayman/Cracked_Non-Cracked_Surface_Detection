@@ -1,8 +1,9 @@
 import os
 import shutil
 import json
+import random
+from pathlib import Path
 import kagglehub
-import splitfolders
 
 script_dir = os.path.dirname(os.path.abspath(__file__))
 config_path = os.path.join(script_dir, "..", "..", "config", "config.json")
@@ -39,17 +40,36 @@ def download_dataset():
     print(f"Moved to: {raw_dir}")
 
 
-def split_dataset(source):
+def split_dataset(source, seed=42):
     with open(config_path, "r") as f:
         config = json.load(f)
-    ratios = tuple(config["split_ratios"])
+    ratios = config["split_ratios"]
 
     if os.path.exists(split_dir):
         shutil.rmtree(split_dir)
 
+    split_names = ["train", "val", "test"]
     print(f"Splitting with ratios {ratios} ...")
-    splitfolders.ratio(source, output=split_dir, seed=42,
-                       ratio=ratios, group_prefix=None, move=False)
+
+    source = Path(source)
+    classes = [d for d in source.iterdir() if d.is_dir()]
+
+    for cls in classes:
+        files = sorted(cls.iterdir())
+        rng = random.Random(seed)
+        rng.shuffle(files)
+
+        n_total = len(files)
+        n1 = int(ratios[0] * n_total)
+        n2 = int(ratios[1] * n_total)
+        splits = [files[:n1], files[n1:n1 + n2], files[n1 + n2:]]
+
+        for split_name, split_files in zip(split_names, splits):
+            out_dir = Path(split_dir) / split_name / cls.name
+            out_dir.mkdir(parents=True, exist_ok=True)
+            for f in split_files:
+                shutil.copy2(str(f), str(out_dir / f.name))
+
     print(f"Done → {split_dir}/{{train,val,test}}")
 
 
