@@ -1,0 +1,86 @@
+{
+  "CNN": {
+    "accuracy": 0.9619225967540574,
+    "precision_cracked": 0.93125,
+    "recall_cracked": 0.9410526315789474,
+    "f1_cracked": 0.9361256544502617,
+    "precision_non_cracked": 0.9750445632798574,
+    "recall_non_cracked": 0.9707187222715173,
+    "f1_non_cracked": 0.9728768341485104,
+    "f1_macro": 0.9545012442993861,
+    "confusion_matrix": [
+      [
+        1341,
+        84
+      ],
+      [
+        99,
+        3282
+      ]
+    ],
+    "params": 6342850
+  },
+  "Column-By-Column RNN": {
+    "accuracy": 0.8841032043279234,
+    "precision_cracked": 0.8622704507512521,
+    "recall_cracked": 0.7249122807017544,
+    "f1_cracked": 0.7876477316050324,
+    "precision_non_cracked": 0.8913525498891353,
+    "recall_non_cracked": 0.9511978704525288,
+    "f1_non_cracked": 0.9203033338102733,
+    "f1_macro": 0.8539755327076528,
+    "confusion_matrix": [
+      [
+        1033,
+        392
+      ],
+      [
+        165,
+        3216
+      ]
+    ],
+    "params": 404610
+  },
+  "MD-RNN": {
+    "accuracy": 0.8847274240532668,
+    "precision_cracked": 0.8464598249801114,
+    "recall_cracked": 0.7466666666666667,
+    "f1_cracked": 0.7934377330350485,
+    "precision_non_cracked": 0.8982812059735137,
+    "recall_non_cracked": 0.942916296953564,
+    "f1_non_cracked": 0.92005772005772,
+    "f1_macro": 0.8567477265463843,
+    "confusion_matrix": [
+      [
+        1064,
+        361
+      ],
+      [
+        193,
+        3188
+      ]
+    ],
+    "params": 873986
+  },
+  "DenseNet121": {
+    "accuracy": 0.9631710362047441,
+    "precision_cracked": 0.940677966101695,
+    "recall_cracked": 0.9347368421052632,
+    "f1_cracked": 0.9376979936642027,
+    "precision_non_cracked": 0.9725663716814159,
+    "recall_non_cracked": 0.9751552795031055,
+    "f1_non_cracked": 0.973859105006646,
+    "f1_macro": 0.9557785493354243,
+    "confusion_matrix": [
+      [
+        1332,
+        93
+      ],
+      [
+        84,
+        3297
+      ]
+    ],
+    "params": 7433026
+  }
+}
