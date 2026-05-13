@@ -1,3 +1,6 @@
 data/
-
 .vscode/
+__pycache__/
+*.pyc
+tf_env/
+results/
